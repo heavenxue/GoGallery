@@ -3,7 +3,6 @@ package com.aibei.lixue.gogallery.widget2;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.database.DataSetObserver;
-import android.graphics.Interpolator;
 import android.graphics.Rect;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -28,8 +27,8 @@ public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<Spinner
     int mSelectionRightPadding = 0;
     int mSelectionBottomPadding = 0;
     Rect mSpinnerPadding = new Rect();
-    View mSelectedView = null;
-    Interpolator mInterpolator; 
+//    View mSelectedView = null;
+//    Interpolator mInterpolator;
 
     RecycleBin mRecycler = new RecycleBin();
     private DataSetObserver mDataSetObserver;
@@ -124,7 +123,7 @@ public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<Spinner
     /**
      * Clear out all children from the list
      */
-    void resetList() {
+    public void resetList() {
         mDataChanged = false;
         mNeedSync = false;
        

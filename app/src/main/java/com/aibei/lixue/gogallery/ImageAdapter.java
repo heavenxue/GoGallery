@@ -2,6 +2,7 @@ package com.aibei.lixue.gogallery;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,7 +16,7 @@ import android.widget.ImageView;
  */
 public class ImageAdapter extends BaseAdapter {
     private Context mContext;
-    private int[] imageids;
+    public int[] imageids;
 
     public ImageAdapter(Context contexts,int[] images){
         this.mContext = contexts;
@@ -53,6 +54,7 @@ public class ImageAdapter extends BaseAdapter {
         holder.holder_imageview.setImageResource(imageids[i]);
         holder.holder_imageview.setScaleX(0.9f);
         holder.holder_imageview.setScaleY(0.9f);
+        holder.holder_imageview.setBackgroundColor(Color.alpha(1));
         return view;
     }
 

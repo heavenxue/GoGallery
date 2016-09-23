@@ -138,6 +138,9 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
      */
     private boolean mBroken;
 
+    private boolean toLeft;
+
+
     public EcoGallery(Context context) {
         this(context, null);
     }
@@ -353,7 +356,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             return;
         }
 
-        boolean toLeft = deltaX < 0;
+        toLeft = deltaX < 0;
 
         int limitedDeltaX = getLimitedMotionScrollAmount(toLeft, deltaX);
         if (limitedDeltaX != deltaX) {
@@ -656,15 +659,16 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             // Set state for next iteration
             curRightEdge = prevIterationView.getLeft() - itemSpacing;
             curPosition--;
+
         }
     }
-
+    private int reCurPosision = 0;
     private void fillToGalleryRight() {
         int itemSpacing = mSpacing;
         int galleryRight = getRight() - getLeft() - getPaddingRight();
         int numChildren = getChildCount();
         int numItems = mItemCount;
-
+//        Log.d(TAG,"numChildren:" + numChildren);
         // Set state for initial iteration
         View prevIterationView = getChildAt(numChildren - 1);
         int curPosition;
@@ -680,18 +684,26 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         }
 
         while (curLeftEdge < galleryRight && curPosition < numItems) {
-//            Log.d("aaa","curPosition:" + curPosition);
-//            Log.d("aaa","numItems:" + numItems);
-//            if (curPosition + 1 >= numItems){
-//                curPosition -= numItems;
-//            }
+            if (reCurPosision != 0){
+                curPosition = 0;
+                mFirstPosition = 1;
+                reCurPosision = 0;
+            }
 
             prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curLeftEdge, true);
+            Log.d(TAG,"mSelectePosition:" + mSelectedPosition);
 
             // Set state for next iteration
             curLeftEdge = prevIterationView.getRight() + itemSpacing;
             curPosition++;
+//            Log.d(TAG,"curPosition1:" + curPosition);
         }
+        if (curPosition == numItems){
+            mFirstPosition = 1;
+            reCurPosision = 1;
+
+        }
+//        Log.d(TAG,"curPosition:" + curPosition);
     }
 
     /**
@@ -1117,8 +1129,14 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     }
 
     boolean movePrevious() {
-        if (mItemCount > 0 && mSelectedPosition > 0) {
-            scrollToChild(mSelectedPosition - mFirstPosition - 1);
+        int nextItem;
+        if (mItemCount > 0 && mSelectedPosition >= 0) {
+            if (mSelectedPosition == 0){
+                nextItem = mSelectedPosition - mFirstPosition +1;
+            }else{
+                nextItem = mSelectedPosition - mFirstPosition -1;
+            }
+            scrollToChild(nextItem);
             return true;
         } else {
             return false;
@@ -1126,8 +1144,16 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     }
 
     boolean moveNext() {
-        if (mItemCount > 0 && mSelectedPosition < mItemCount - 1) {
-            scrollToChild(mSelectedPosition - mFirstPosition + 1);
+        int nextItem;
+        if (mItemCount > 0 && mSelectedPosition < mItemCount) {
+
+            if (mSelectedPosition == mItemCount -1){
+                nextItem = getAdapter().getCount() -1;
+                mSelectedPosition = mFirstPosition;
+            }else{
+                nextItem = mSelectedPosition - mFirstPosition +1;
+            }
+            scrollToChild(nextItem);
             return true;
         } else {
             return false;
