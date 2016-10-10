@@ -51,7 +51,7 @@ public class ImageAdapter extends BaseAdapter {
         }else{
             holder = (ViewHolder) view.getTag();
         }
-        holder.holder_imageview.setImageResource(imageids[i]);
+        holder.holder_imageview.setImageResource(imageids[i%imageids.length]);
         holder.holder_imageview.setScaleX(0.9f);
         holder.holder_imageview.setScaleY(0.9f);
         holder.holder_imageview.setBackgroundColor(Color.alpha(1));

@@ -486,5 +486,13 @@ public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<Spinner
                        
             scrapHeap.clear();
         }
+        //获取数量
+        int size(){
+            if (mScrapHeap != null){
+                return mScrapHeap.size();
+            }
+            return 0;
+        }
     }
+
 }

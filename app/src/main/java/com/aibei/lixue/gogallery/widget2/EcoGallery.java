@@ -534,13 +534,14 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         int galleryCenter = getCenterOfGallery();
 
         // Common case where the current selected position is correct
-        if (selView.getLeft() <= galleryCenter && selView.getRight() >= galleryCenter) {
-            return;
-        }
+//        if (selView.getLeft() <= galleryCenter && selView.getRight() >= galleryCenter) {
+//            return;
+//        }
 
         // TODO better search
         int closestEdgeDistance = Integer.MAX_VALUE;
         int newSelectedChildIndex = 0;
+        Log.d("aa","getchildCount:" + getChildCount());
         for (int i = getChildCount() - 1; i >= 0; i--) {
 
             View child = getChildAt(i);
@@ -558,8 +559,11 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
                 newSelectedChildIndex = i;
             }
         }
-
         int newPos = mFirstPosition + newSelectedChildIndex;
+        if (newPos == mItemCount - 1){
+            newPos = 0;
+//            Log.d("aa","mSelectedPosition:" + mSelectedPosition);
+        }
 
         if (newPos != mSelectedPosition) {
             setSelectedPositionInt(newPos);
@@ -612,7 +616,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
          * on. The 0 for x will be offset in a couple lines down.
          */
         mFirstPosition = mSelectedPosition;
-        View sel = makeAndAddView(mSelectedPosition, 0, 0, true);
+        View sel = makeAndAddView(mSelectedPosition, 0, 0, true);//得到选中的view
 
         // Put the selected child in the center
         int selectedOffset = childrenLeft + (childrenWidth / 2) - (sel.getWidth() / 2);
@@ -661,49 +665,54 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             curPosition--;
 
         }
+//        if (curPosition < 0){
+////            removeViews(1,numChildren - 1);
+//            mFirstPosition = getChildCount();
+//            mSelectedPosition = getChildCount() - 1;
+//        }
+//        Log.d(TAG,"curPosition:" + curPosition);
     }
-    private int reCurPosision = 0;
+
+    /**
+     * 手指向左滑动，致使gallery整体向右滑动
+     * **/
     private void fillToGalleryRight() {
         int itemSpacing = mSpacing;
-        int galleryRight = getRight() - getLeft() - getPaddingRight();
         int numChildren = getChildCount();
         int numItems = mItemCount;
-//        Log.d(TAG,"numChildren:" + numChildren);
+        Log.d(TAG,"numChildren:" + numChildren + ",mFirstPostion:" + mFirstPosition);
         // Set state for initial iteration
         View prevIterationView = getChildAt(numChildren - 1);
         int curPosition;
         int curLeftEdge;
+        int galleryRight = getRight() - getLeft() - getPaddingRight();
 
         if (prevIterationView != null) {
             curPosition = mFirstPosition + numChildren;
             curLeftEdge = prevIterationView.getRight() + itemSpacing;
+            Log.d(TAG,"prevIterationView不为nuLl：curLeftEdge :" + curLeftEdge + ",galleryRight:" + galleryRight);
         } else {
             mFirstPosition = curPosition = mItemCount - 1;
             curLeftEdge = getPaddingLeft();
             mShouldStopFling = true;
+            Log.d(TAG,"prevIterationView为nuLl：curLeftEdge :" + curLeftEdge + ",galleryRight:" + galleryRight);
         }
-
-        while (curLeftEdge < galleryRight && curPosition < numItems) {
-            if (reCurPosision != 0){
-                curPosition = 0;
-                mFirstPosition = 1;
-                reCurPosision = 0;
-            }
-
+        Log.d(TAG,"galleryRight:" + galleryRight);
+        while (curLeftEdge < galleryRight) {
             prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curLeftEdge, true);
             Log.d(TAG,"mSelectePosition:" + mSelectedPosition);
 
             // Set state for next iteration
             curLeftEdge = prevIterationView.getRight() + itemSpacing;
             curPosition++;
-//            Log.d(TAG,"curPosition1:" + curPosition);
         }
+//
         if (curPosition == numItems){
-            mFirstPosition = 1;
-            reCurPosision = 1;
-
+            Log.d("ww","numChildren:" + numChildren);
+            mFirstPosition = 0;
+            mSelectedPosition = 0;
         }
-//        Log.d(TAG,"curPosition:" + curPosition);
+        Log.d(TAG,"curPosition:" + curPosition);
     }
 
     /**
@@ -1132,7 +1141,8 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         int nextItem;
         if (mItemCount > 0 && mSelectedPosition >= 0) {
             if (mSelectedPosition == 0){
-                nextItem = mSelectedPosition - mFirstPosition +1;
+//                nextItem = mSelectedPosition - mFirstPosition +1;
+                nextItem = mSelectedPosition - mFirstPosition;
             }else{
                 nextItem = mSelectedPosition - mFirstPosition -1;
             }
@@ -1175,7 +1185,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     @Override
     void setSelectedPositionInt(int position) {
         super.setSelectedPositionInt(position);
-
+        Log.d(TAG,"setSelectedPositionInt(),mSelectedPosition: " + mSelectedPosition);
         // Updates any metadata we keep about the selected item.
         updateSelectedItemMetadata();
     }
