@@ -21,5 +21,9 @@ public class Main3Activity extends AppCompatActivity {
         gallery = (EcoGallery) findViewById(R.id.gallery);
         gallery.setAdapter( imgAdapter = new ImageAdapter(getBaseContext(),imageids));
         gallery.setUnselectedAlpha(0.3f);
+        gallery.setHorizontalScrollBarEnabled(true);
+        gallery.setSlotInCenter(true);
+        gallery.setScrollCycle(true);
+
     }
 }

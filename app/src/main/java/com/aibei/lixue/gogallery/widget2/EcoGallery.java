@@ -77,6 +77,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
      */
     private FlingRunnable mFlingRunnable = new FlingRunnable();
 
+
     /**
      * Sets mSuppressSelectionChanged = false. This is used to set it to false
      * in the future. It will also trigger a selection changed.
@@ -113,6 +114,17 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     private boolean mShouldCallbackOnUnselectedItemClick = true;
 
     /**
+     * Left most edge of a child seen so far during layout.
+     */
+    private int mLeftMost;
+
+    /**
+     * Right most edge of a child seen so far during layout.
+     */
+    private int mRightMost;
+
+
+    /**
      * If true, do not callback to item selected listener.
      */
     private boolean mSuppressSelectionChanged;
@@ -139,6 +151,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     private boolean mBroken;
 
     private boolean toLeft;
+
 
 
     public EcoGallery(Context context) {
@@ -286,19 +299,66 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     @Override
     protected int computeHorizontalScrollExtent() {
         // Only 1 item is considered to be selected
-        return 1;
+//        return 1;
+        // Note: Support the horizontal scroll bar for this gallery.
+
+        final int count = getChildCount();
+        if (count > 0) {
+            int extent = count * 100;//把总数扩展到100倍
+
+            View view = getChildAt(0);
+            final int left = view.getLeft();
+            int width = view.getWidth();
+            if (width > 0) {
+                boolean isFirst = (0 == mFirstPosition);
+                // If the first position is zero and the left is more than zero, we do not add the
+                // left extent.
+                if (!(isFirst && left > 0)) {
+                    extent += (left * 100) / width;
+                }
+            }
+
+            view = getChildAt(count - 1);
+            final int right = view.getRight();
+            width = view.getWidth();
+            if (width > 0) {
+                boolean isLast = (mFirstPosition + count == mItemCount);
+                // If the last child is show, we do no add the right extent.
+                if (!(isLast && right < getWidth())) {
+                    extent -= ((right - getWidth()) * 100) / width;
+                }
+            }
+
+            return extent;
+        }
+
+        return 0;
     }
 
     @Override
     protected int computeHorizontalScrollOffset() {
         // Current scroll position is the same as the selected position
+//        return mSelectedPosition;
+        if (mFirstPosition >= 0 && getChildCount() > 0) {
+            final View view = getChildAt(0);
+            final int left = view.getLeft();
+            int width = view.getWidth();
+            if (width > 0) {
+                final int whichCol = mFirstPosition / 1;
+                return Math.max(whichCol * 100 - (left * 100) / width, 0);
+            }
+        }
+
         return mSelectedPosition;
     }
 
     @Override
     protected int computeHorizontalScrollRange() {
         // Scroll range is the same as the item count
-        return mItemCount;
+//        return mItemCount;
+        final int numRows = 1;
+        final int colCount = (mItemCount + numRows - 1) / numRows;
+        return Math.max(colCount * 100, 0);
     }
 
     @Override
@@ -358,29 +418,43 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
         toLeft = deltaX < 0;
 
-        int limitedDeltaX = getLimitedMotionScrollAmount(toLeft, deltaX);
-        if (limitedDeltaX != deltaX) {
-            // The above call returned a limited amount, so stop any
-            // scrolls/flings
-            mFlingRunnable.endFling(false);
-            onFinishedMovement();
+        if (isSlotInCenter()){
+            if (! isScrollCycle() || getChildCount() >= mItemCount){
+                int limitedDeltaX = getLimitedMotionScrollAmount(toLeft, deltaX);
+                if (limitedDeltaX != deltaX) {
+                    // The above call returned a limited amount, so stop any
+                    // scrolls/flings
+                    mFlingRunnable.endFling(false);
+                    onFinishedMovement();
+                }
+            }
+
+
+            // 将所有子View 都移动 limiterDeltaX 的距离
+            offsetChildrenLeftAndRight(deltaX);
+
+            // 去掉移出屏幕的子View
+            detachOffScreenChildren(toLeft);
+
+            // 补充移动后空余位置的视图
+            if (toLeft) {
+                // If moved left, there will be empty space on the right
+                fillToGalleryRight();
+            } else {
+                // Similarly, empty space on the left
+                fillToGalleryLeft();
+            }
+
+            //clear used views
+            mRecycler.clear();
+
+            //移动过程中会重新修改选中项
+            setSelectionToCenterChild();
+
+            invalidate();
+            return;
         }
 
-        offsetChildrenLeftAndRight(limitedDeltaX);
-
-        detachOffScreenChildren(toLeft);
-
-        if (toLeft) {
-            // If moved left, there will be empty space on the right
-            fillToGalleryRight();
-        } else {
-            // Similarly, empty space on the left
-            fillToGalleryLeft();
-        }
-
-        setSelectionToCenterChild();
-
-        invalidate();
     }
 
     int getLimitedMotionScrollAmount(boolean motionToLeft, int deltaX) {
@@ -460,8 +534,12 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
                     break;
                 } else {
                     count++;
-                    mRecycler.add(firstPosition + i, child);
+                    mRecycler.put(firstPosition + i, child);
                 }
+            }
+            // Do not detach the last child when the child is out of the left bound.
+            if (count == numChildren) {
+                count -= 1;
             }
         } else {
             final int galleryRight = getWidth() - getPaddingRight();
@@ -472,8 +550,12 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
                 } else {
                     start = i;
                     count++;
-                    mRecycler.add(firstPosition + i, child);
+                    mRecycler.put(firstPosition + i, child);
                 }
+            }
+            // Do not detach the first child when the child is out of the left bound.
+            if (0 == start) {
+                start += 1;
             }
         }
 
@@ -481,6 +563,10 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
         if (toLeft) {
             mFirstPosition += count;
+            Log.d("tt","mFirstPosition:" + mFirstPosition);
+            if (isScrollCycle()) {
+                mFirstPosition = mFirstPosition % mItemCount;
+            }
         }
     }
 
@@ -492,16 +578,66 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
         if (getChildCount() == 0 || mSelectedChild == null)
             return;
+        if (isSlotInCenter()) {
+            int selectedCenter = getCenterOfView(mSelectedChild);
+            int targetCenter = getCenterOfGallery();
 
-        int selectedCenter = getCenterOfView(mSelectedChild);
-        int targetCenter = getCenterOfGallery();
+            int scrollAmount = targetCenter - selectedCenter;
+            if (scrollAmount != 0) {
+                mFlingRunnable.startUsingDistance(scrollAmount);
+            } else {
+                onFinishedMovement();
+            }
+            return;
+        }
+        // Note: Make the gallery item views always dock right or left sides.
+        // If the gallery is playing animation, do nothing.
+        //
+        if (getChildCount() == 0) {
+            return;
+        }
 
-        int scrollAmount = targetCenter - selectedCenter;
-        if (scrollAmount != 0) {
+        int scrollAmount = 0;
+
+        if (0 == mFirstPosition) {
+            // In these cases the gallery child count is equal or more than the item count
+            // (adapter.getCount()),
+            // and the gallery first child's left is bigger than zero, we should move the
+            // first child anchors at the most left side of gallery.
+            View child = getChildAt(0);
+
+            // Make the first child anchors at the most left side of gallery when it is over
+            // the left side of gallery.
+            if (child.getLeft() >= 0) {
+                scrollAmount = getPaddingLeft() - child.getLeft();
+            } else {
+                // when scroll from right to left.
+                View lastChild = getChildAt(getChildCount() - 1);
+
+                if ((lastChild.getRight() - child.getLeft()) < (getRight() - getPaddingRight())) {
+                    scrollAmount = getPaddingLeft() - mFirstChildOffset;
+                } else if (lastChild.getRight() < (getRight() - getPaddingRight())) {
+                    scrollAmount = getWidth() - getPaddingRight() - lastChild.getRight();
+                }
+            }
+        }
+        // If the most right view is the last item.
+        else if (mFirstPosition + getChildCount() == mItemCount) {
+            View child = getChildAt(getChildCount() - 1);
+            // If the child's right side is fully seeing, i.e, the child right side is
+            // in the right of gallery.
+            if (child.getRight() < (getRight() - getPaddingRight())) {
+                scrollAmount = getWidth() - getPaddingRight() - child.getRight();
+            }
+        }
+
+        if (0 != scrollAmount) {
+            // Call startUsingDistance method to implement elastic effect.
             mFlingRunnable.startUsingDistance(scrollAmount);
         } else {
             onFinishedMovement();
         }
+
     }
 
     private void onFinishedMovement() {
@@ -541,7 +677,6 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         // TODO better search
         int closestEdgeDistance = Integer.MAX_VALUE;
         int newSelectedChildIndex = 0;
-        Log.d("aa","getchildCount:" + getChildCount());
         for (int i = getChildCount() - 1; i >= 0; i--) {
 
             View child = getChildAt(i);
@@ -560,9 +695,9 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             }
         }
         int newPos = mFirstPosition + newSelectedChildIndex;
-        if (newPos == mItemCount - 1){
-            newPos = 0;
-//            Log.d("aa","mSelectedPosition:" + mSelectedPosition);
+
+        if (isScrollCycle()) {
+            newPos = newPos % mItemCount;
         }
 
         if (newPos != mSelectedPosition) {
@@ -585,8 +720,8 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     @Override
     void layout(int delta, boolean animate) {
 
-        int childrenLeft = mSpinnerPadding.left;
-        int childrenWidth = getRight() - getLeft() - mSpinnerPadding.left - mSpinnerPadding.right;
+        int childrenLeft = mSpinnerPadding.left + mFirstChildOffset;
+//        int childrenWidth = getRight() - getLeft() - mSpinnerPadding.left - mSpinnerPadding.right;
 
         if (mDataChanged) {
             handleDataChanged();
@@ -609,6 +744,12 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         // Clear out old views
         detachAllViewsFromParent();
 
+          /*
+         * These will be used to give initial positions to views entering the gallery as we scroll
+         */
+        mRightMost = 0;
+        mLeftMost = 0;
+
         // Make selected view and center it
 
         /*
@@ -619,23 +760,40 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         View sel = makeAndAddView(mSelectedPosition, 0, 0, true);//得到选中的view
 
         // Put the selected child in the center
-        int selectedOffset = childrenLeft + (childrenWidth / 2) - (sel.getWidth() / 2);
+//        int selectedOffset = childrenLeft + (childrenWidth / 2) - (sel.getWidth() / 2);
+        int selectedOffset = childrenLeft + mSpacing;
+        if (isSlotInCenter()){
+            int childrenWidth = getRight() - getLeft() - mSpinnerPadding.left - mSpinnerPadding.right;
+            selectedOffset = childrenLeft + (childrenWidth / 2) - (sel.getWidth() / 2);
+        }
+
         sel.offsetLeftAndRight(selectedOffset);
 
         fillToGalleryRight();
         fillToGalleryLeft();
 
         invalidate();
-        checkSelectionChanged();
+//        checkSelectionChanged();
 
         mDataChanged = false;
         mNeedSync = false;
         setNextSelectedPositionInt(mSelectedPosition);
 
         updateSelectedItemMetadata();
+
+        // NOTE: If the child count is less than the item count, we should disable cycle scroll,
+        // but, we should NOT change the mIsScrollCycle which is set by callers, because
+        // after user enlarge the item count such as add data dynamically, if the item count
+        // is bigger than child count, the gallery should be scrolling cycle.
+        mIsScrollCycleTemp = !(getChildCount() >= mItemCount);
     }
 
     private void fillToGalleryLeft() {
+        if (isSlotInCenter()){
+            fillToGalleryLeftCycle();
+            return;
+        }
+
         int itemSpacing = mSpacing;
         int galleryLeft = getPaddingLeft();
 
@@ -665,22 +823,21 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             curPosition--;
 
         }
-//        if (curPosition < 0){
-////            removeViews(1,numChildren - 1);
-//            mFirstPosition = getChildCount();
-//            mSelectedPosition = getChildCount() - 1;
-//        }
-//        Log.d(TAG,"curPosition:" + curPosition);
     }
 
     /**
      * 手指向左滑动，致使gallery整体向右滑动
      * **/
     private void fillToGalleryRight() {
+        if (isScrollCycle()) {
+            fillToGalleryRightCycle();
+            return;
+        }
+
         int itemSpacing = mSpacing;
         int numChildren = getChildCount();
         int numItems = mItemCount;
-        Log.d(TAG,"numChildren:" + numChildren + ",mFirstPostion:" + mFirstPosition);
+        Log.d("ww","numChildren:" + numChildren + ",mFirstPostion:" + mFirstPosition);
         // Set state for initial iteration
         View prevIterationView = getChildAt(numChildren - 1);
         int curPosition;
@@ -690,27 +847,19 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         if (prevIterationView != null) {
             curPosition = mFirstPosition + numChildren;
             curLeftEdge = prevIterationView.getRight() + itemSpacing;
-            Log.d(TAG,"prevIterationView不为nuLl：curLeftEdge :" + curLeftEdge + ",galleryRight:" + galleryRight);
         } else {
             mFirstPosition = curPosition = mItemCount - 1;
             curLeftEdge = getPaddingLeft();
             mShouldStopFling = true;
-            Log.d(TAG,"prevIterationView为nuLl：curLeftEdge :" + curLeftEdge + ",galleryRight:" + galleryRight);
         }
-        Log.d(TAG,"galleryRight:" + galleryRight);
-        while (curLeftEdge < galleryRight) {
+
+        while (curLeftEdge < galleryRight && curPosition < numItems) {
             prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curLeftEdge, true);
             Log.d(TAG,"mSelectePosition:" + mSelectedPosition);
 
             // Set state for next iteration
             curLeftEdge = prevIterationView.getRight() + itemSpacing;
             curPosition++;
-        }
-//
-        if (curPosition == numItems){
-            Log.d("ww","numChildren:" + numChildren);
-            mFirstPosition = 0;
-            mSelectedPosition = 0;
         }
         Log.d(TAG,"curPosition:" + curPosition);
     }
@@ -733,10 +882,25 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     private View makeAndAddView(int position, int offset, int x, boolean fromLeft) {
 
         View child;
+        if (!mDataChanged) {
+            child = mRecycler.get(position);
+            if (child != null) {
 
-        child = mRecycler.get();
-        // pass child as convertview
-        child = mAdapter.getView(position, child, this);
+                // Can reuse an existing view
+                int childLeft = child.getLeft();
+
+                // Remember left and right edges of where views have been placed
+                mRightMost = Math.max(mRightMost, childLeft + child.getMeasuredWidth());
+                mLeftMost = Math.min(mLeftMost, childLeft);
+
+                // Position the view
+                setUpChild(child, offset, x, fromLeft);
+
+                return child;
+            }
+        }
+        // Nothing found in the recycler -- ask the adapter for a view
+        child = mAdapter.getView(position, null, this);
 
         // Position the view
         setUpChild(child, offset, x, fromLeft);
@@ -760,9 +924,9 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
         // Respect layout params that are already in the view. Otherwise
         // make some up...
-        LayoutParams lp = (LayoutParams) child.getLayoutParams();
+        EcoGallery.LayoutParams lp = (EcoGallery.LayoutParams) child.getLayoutParams();
         if (lp == null) {
-            lp = (LayoutParams) generateDefaultLayoutParams();
+            lp = (EcoGallery.LayoutParams) generateDefaultLayoutParams();
         }
 
         addViewInLayout(child, fromLeft ? -1 : 0, lp);
@@ -847,10 +1011,16 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     public boolean onSingleTapUp(MotionEvent e) {
 
         if (mDownTouchPosition >= 0) {
+            if (isScrollCycle()) {
+                mDownTouchPosition = mDownTouchPosition % getCount();
+            }
 
-            // An item tap should make it selected, so scroll to this child.
-            scrollToChild(mDownTouchPosition - mFirstPosition);
+            if (isSlotInCenter()){
+                // An item tap should make it selected, so scroll to this child.
+                scrollToChild(mDownTouchPosition - mFirstPosition);
 
+            }
+            performItemSelect(mDownTouchPosition);
             // Also pass the click so the client knows, if it wants to.
             if (mShouldCallbackOnUnselectedItemClick || mDownTouchPosition == mSelectedPosition) {
                 performItemClick(mDownTouchView, mDownTouchPosition, mAdapter.getItemId(mDownTouchPosition));
@@ -867,22 +1037,47 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
      * 去除gallery的滚动惯性
      */
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        if (e1.getX() - e2.getX() < 0.0f){
-            onKeyDown(KeyEvent.KEYCODE_DPAD_LEFT,null);
-        }else{
-            onKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT,null);
+        boolean disableScroll = shouldDisableScroll();
+
+        if (disableScroll) {
+            return true;
         }
+
+        //
+
+        if (!mShouldCallbackDuringFling) {
+            // We want to suppress selection changes
+
+            // Remove any future code to set mSuppressSelectionChanged = false
+            removeCallbacks(mDisableSuppressSelectionChangedRunnable);
+
+            // This will get reset once we scroll into slots
+            if (!mSuppressSelectionChanged)
+                mSuppressSelectionChanged = true;
+        }
+
+        // Accelerate or decelerate the velocity of gallery on X directioin.
+        velocityX *= getVelocityRatio();
+        // Fling the gallery!
+        mFlingRunnable.startUsingVelocity((int) -velocityX);
+
         return true;
+//        if (e1.getX() - e2.getX() < 0.0f){
+//            onKeyDown(KeyEvent.KEYCODE_DPAD_LEFT,null);
+//        }else{
+//            onKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT,null);
+//        }
+//        return true;
     }
 
     /**
      * {@inheritDoc}
      */
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-
+        boolean disableScroll = shouldDisableScroll();
         if (localLOGV)
             Log.v(TAG, String.valueOf(e2.getX() - e1.getX()));
-
+        mScrolling = true;
         /*
          * Now's a good time to tell our parent to stop intercepting our events!
          * The user has moved more than the slop amount, since GestureDetector
@@ -1073,7 +1268,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         // Gallery steals all key events
-        return event.dispatch(this, null, null);
+        return event.dispatch(this);
     }
 
     /**
@@ -1084,7 +1279,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
-
+            //为了使滑动没有那么有阻力，是效果更好
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 if (movePrevious()) {
                     playSoundEffect(SoundEffectConstants.NAVIGATION_LEFT);
@@ -1138,15 +1333,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     }
 
     boolean movePrevious() {
-        int nextItem;
         if (mItemCount > 0 && mSelectedPosition >= 0) {
-            if (mSelectedPosition == 0){
-//                nextItem = mSelectedPosition - mFirstPosition +1;
-                nextItem = mSelectedPosition - mFirstPosition;
-            }else{
-                nextItem = mSelectedPosition - mFirstPosition -1;
-            }
-            scrollToChild(nextItem);
             return true;
         } else {
             return false;
@@ -1155,15 +1342,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
     boolean moveNext() {
         int nextItem;
-        if (mItemCount > 0 && mSelectedPosition < mItemCount) {
-
-            if (mSelectedPosition == mItemCount -1){
-                nextItem = getAdapter().getCount() -1;
-                mSelectedPosition = mFirstPosition;
-            }else{
-                nextItem = mSelectedPosition - mFirstPosition +1;
-            }
-            scrollToChild(nextItem);
+        if (mItemCount > 0 && mSelectedPosition < mItemCount - 1) {
             return true;
         } else {
             return false;
@@ -1193,7 +1372,12 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     private void updateSelectedItemMetadata() {
 
         View oldSelectedChild = mSelectedChild;
-
+        int index = mSelectedPosition - mFirstPosition;
+        if (isScrollCycle()) {
+            if (mFirstPosition > mSelectedPosition) {
+                index = mItemCount - mFirstPosition + mSelectedPosition;
+            }
+        }
         View child = mSelectedChild = getChildAt(mSelectedPosition - mFirstPosition);
         if (child == null) {
             return;
@@ -1322,14 +1506,16 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         }
 
         private void endFling(boolean scrollIntoSlots) {
-        /*
-         * Force the scroller's status to finished (without setting its
-         * position to the end)
-         */
+            mScrolling = false;
+
+            /*
+             * Force the scroller's status to finished (without setting its position to the end)
+             */
             mScroller.forceFinished(true);
 
             if (scrollIntoSlots)
                 scrollIntoSlots();
+
         }
 
         public void run() {
@@ -1375,6 +1561,253 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             }
         }
 
+    }
+
+    /**
+     * Indicate disable scroll action when the child item is less than mItemCount. in other word,
+     * the children can be fully seeing in the gallery.
+     */
+    private boolean mIsDisableScroll = false;
+    /**
+    * scrolling and animating flag
+    */
+    private boolean mScrolling = false;
+
+
+    /**
+     * The first child offset.
+     */
+    private int mFirstChildOffset = 0;
+
+
+    /**
+     * The scroll velocity ratio.
+     */
+    private float mVelocityRatio = 1.0f;
+
+    /**
+     * Indicate the gallery scroll cycle or not.
+     */
+    private boolean mIsScrollCycle = false;
+
+    /**
+     * The temporary member for mIsScrollCycle
+     */
+    private boolean mIsScrollCycleTemp = true;
+
+    /**
+     * Slot into center. The default behavior of gallery is that the selected child will be slot in
+     * center.
+     */
+    private boolean mIsSlotCenter = false;
+
+    /**
+     * The orientation horizontal
+     */
+    public static final int HORIZONTAL = 0x01;
+
+    /**
+     * The orientation vertical
+     */
+    public static final int VERTICAL = 0x02;
+
+    /**
+     * Indicate the gallery selected slot in center of not, default is false.
+     *
+     * @param isSlotCenter
+     */
+    public void setSlotInCenter(boolean isSlotCenter) {
+        mIsSlotCenter = isSlotCenter;
+    }
+
+    /**
+     * Indicate the gallery selected slot in center of not, default is false.
+     *
+     * @return
+     */
+    public boolean isSlotInCenter() {
+        return mIsSlotCenter;
+    }
+
+    /**
+     * Set the scroll cycle.
+     *
+     * @param scrollCycle
+     */
+    public void setScrollCycle(boolean scrollCycle) {
+        mIsScrollCycle = scrollCycle;
+    }
+
+    /**
+     * Get the flag for scroll cycle.
+     *
+     * @return
+     */
+    public boolean isScrollCycle() {
+        return mIsScrollCycle && mIsScrollCycleTemp;
+    }
+
+    /**
+     * Select a child.
+     */
+    private boolean performItemSelect(int childPosition) {
+        if (childPosition != mSelectedPosition) {
+            setSelectedPositionInt(childPosition);
+            setNextSelectedPositionInt(childPosition);
+            checkSelectionChanged();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Indicate the should disable scroll action.
+     *
+     * @return true if disable scroll, otherwise false.
+     *
+     * @author LeeHong
+     */
+    protected boolean shouldDisableScroll() {
+        if (mIsDisableScroll) {
+            if (getChildCount() < mItemCount) {
+                return false;
+            }
+
+            // First child is out of gallery left bound.
+            View child = getChildAt(0);
+            if (null != child && child.getLeft() < getLeft()) {
+                return false;
+            }
+
+            // Last child is out of gallery right bound.
+            child = getChildAt(getChildCount() - 1);
+            if (null != child && child.getRight() > getRight()) {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Called when fling occurs, this method can return ratio value to accelerate or decelerate the
+     * velocity of gallery.
+     *
+     * @return default return 1.0f.
+     *
+     * @author LeeHong
+     */
+    public float getVelocityRatio() {
+        return mVelocityRatio;
+    }
+    /**
+     * Set the scroll or fling velocity ratio, value is in the range [0.5, 1.5], default value is
+     * 1.0f.
+     *
+     * @param velocityRatio
+     *
+     * @author LeeHong
+     */
+    public void setVelocityRatio(float velocityRatio) {
+        mVelocityRatio = velocityRatio;
+
+        if (mVelocityRatio < 0.5f) {
+            mVelocityRatio = 0.5f;
+        } else if (mVelocityRatio > 1.5f) {
+            mVelocityRatio = 1.5f;
+        }
+    }
+
+    private void fillToGalleryLeftCycle() {
+        int itemSpacing = mSpacing;
+        int galleryLeft = getPaddingLeft();// mPaddingLeft;
+
+        // Set state for initial iteration
+        View prevIterationView = getChildAt(0);
+        int curPosition;
+        int curRightEdge;
+
+        if (prevIterationView != null) {
+            curPosition = mFirstPosition - 1;
+            curRightEdge = prevIterationView.getLeft() - itemSpacing;
+        } else {
+            // No children available!
+            curPosition = 0;
+            // curRightEdge = mRight - mLeft - mPaddingRight;
+            curRightEdge = getRight() - getLeft() - getPaddingRight();
+            mShouldStopFling = true;
+        }
+
+        while (curRightEdge > galleryLeft && curPosition >= 0) {
+            prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curRightEdge, false);
+
+            // Remember some state
+            mFirstPosition = curPosition;
+
+            // Set state for next iteration
+            curRightEdge = prevIterationView.getLeft() - itemSpacing;
+            curPosition--;
+        }
+
+        curPosition = mItemCount - 1;
+        while (curRightEdge > galleryLeft && getChildCount() < mItemCount) {
+            prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curRightEdge, false);
+
+            // Remember some state
+            mFirstPosition = curPosition;
+
+            // Set state for next iteration
+            curRightEdge = prevIterationView.getLeft() - itemSpacing;
+            curPosition--;
+        }
+    }
+
+    private void fillToGalleryRightCycle() {
+        int itemSpacing = mSpacing;
+
+        // int galleryRight = mRight - mLeft - mPaddingRight;
+        int galleryRight = getRight() - getLeft() - getPaddingRight();
+
+        int numChildren = getChildCount();
+        int numItems = mItemCount;
+
+        // Set state for initial iteration
+        View prevIterationView = getChildAt(numChildren - 1);
+        int curPosition;
+        int curLeftEdge;
+
+        Log.d(TAG,"  fillToGalleryRightCycle mFirstPosition = " + mFirstPosition);
+
+        if (prevIterationView != null) {
+            curPosition = mFirstPosition + numChildren;
+            curLeftEdge = prevIterationView.getRight() + itemSpacing;
+        } else {
+            mFirstPosition = curPosition = mItemCount - 1;
+            curLeftEdge = getPaddingLeft();// mPaddingLeft;
+            mShouldStopFling = true;
+        }
+
+        while (curLeftEdge < galleryRight && curPosition < numItems) {
+
+            prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curLeftEdge, true);
+
+            // Set state for next iteration
+            curLeftEdge = prevIterationView.getRight() + itemSpacing;
+            curPosition++;
+        }
+
+        curPosition = curPosition % numItems;
+        while (curLeftEdge <= galleryRight && getChildCount() < mItemCount) {
+            prevIterationView = makeAndAddView(curPosition, curPosition - mSelectedPosition, curLeftEdge, true);
+
+            // Set state for next iteration
+            curLeftEdge = prevIterationView.getRight() + itemSpacing;
+            curPosition++;
+        }
     }
 
     /**
