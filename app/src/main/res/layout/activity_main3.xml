@@ -6,12 +6,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.aibei.lixue.gogallery.Main3Activity">
-    <com.aibei.lixue.gogallery.widget2.EcoGallery
+    <com.aibei.lixue.gogallery.widget2.TosGallery
         android:id="@+id/gallery"
         android:layout_width="match_parent"
         android:layout_height="210dp"
         android:background="#e0e0e0"
         app:unselectedAlpha="0.2"
         app:selectedScale="1.2">
-    </com.aibei.lixue.gogallery.widget2.EcoGallery>
+    </com.aibei.lixue.gogallery.widget2.TosGallery>
 </RelativeLayout>

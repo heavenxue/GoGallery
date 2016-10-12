@@ -15,7 +15,7 @@ import android.widget.SpinnerAdapter;
 
 import com.aibei.lixue.gogallery.R;
 
-public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<SpinnerAdapter> {
+public abstract class TosGalleryAbsSpinner extends TosGalleryAdapterView<SpinnerAdapter> {
 
     SpinnerAdapter mAdapter;
 
@@ -37,16 +37,16 @@ public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<Spinner
     /** Temporary frame to hold a child View's frame rectangle */
     private Rect mTouchFrame;
 
-    public EcoGalleryAbsSpinner(Context context) {
+    public TosGalleryAbsSpinner(Context context) {
         super(context);
         initAbsSpinner();
     }
 
-    public EcoGalleryAbsSpinner(Context context, AttributeSet attrs) {
+    public TosGalleryAbsSpinner(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public EcoGalleryAbsSpinner(Context context, AttributeSet attrs, int defStyle) {
+    public TosGalleryAbsSpinner(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         initAbsSpinner();
 
@@ -363,7 +363,7 @@ public abstract class EcoGalleryAbsSpinner extends EcoGalleryAdapterView<Spinner
         int position;
 
         /**
-         * Constructor called from {@link EcoGalleryAbsSpinner#onSaveInstanceState()}
+         * Constructor called from {@link TosGalleryAbsSpinner#onSaveInstanceState()}
          */
         SavedState(Parcelable superState) {
             super(superState);

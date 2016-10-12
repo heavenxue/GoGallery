@@ -25,9 +25,11 @@ import com.aibei.lixue.gogallery.R;
 
 import java.lang.reflect.Field;
 
-public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.OnGestureListener {
+import static com.aibei.lixue.gogallery.R.styleable.EcoGallery;
 
-    private static final String TAG = "Gallery";
+public class TosGallery extends TosGalleryAbsSpinner implements GestureDetector.OnGestureListener {
+
+    private static final String TAG = "TosGallery";
 
     private static final boolean localLOGV = false;
 
@@ -54,6 +56,60 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
      * The alpha of items that are not selected.
      */
     private float mUnselectedAlpha;
+
+    /**
+     * The fling listener.
+     */
+    private OnEndFlingListener mOnEndFlingListener = null;
+    /**
+     * Indicate disable scroll action when the child item is less than mItemCount. in other word,
+     * the children can be fully seeing in the gallery.
+     */
+    private boolean mIsDisableScroll = false;
+
+    /**
+     * scrolling and animating flag
+     */
+    private boolean mScrolling = false;
+
+
+    /**
+     * The first child offset.
+     */
+    private int mFirstChildOffset = 0;
+
+
+    /**
+     * The scroll velocity ratio.
+     */
+    private float mVelocityRatio = 1.0f;
+
+    /**
+     * Indicate the gallery scroll cycle or not.
+     */
+    private boolean mIsScrollCycle = false;
+
+    /**
+     * The temporary member for mIsScrollCycle
+     */
+    private boolean mIsScrollCycleTemp = true;
+
+    /**
+     * Slot into center. The default behavior of gallery is that the selected child will be slot in
+     * center.
+     */
+    private boolean mIsSlotCenter = false;
+
+    /**
+     * The orientation horizontal
+     */
+    public static final int HORIZONTAL = 0x01;
+
+    /**
+     * The orientation vertical
+     */
+    public static final int VERTICAL = 0x02;
+
 
     private int mGravity;
 
@@ -154,15 +210,15 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
 
 
-    public EcoGallery(Context context) {
+    public TosGallery(Context context) {
         this(context, null);
     }
 
-    public EcoGallery(Context context, AttributeSet attrs) {
+    public TosGallery(Context context, AttributeSet attrs) {
         this(context, attrs, R.attr.ecoGalleryStyle);
     }
 
-    public EcoGallery(Context context, AttributeSet attrs, int defStyle) {
+    public TosGallery(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         mBroken = true;
@@ -170,7 +226,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         mGestureDetector = new GestureDetector(context, this);
         mGestureDetector.setIsLongpressEnabled(true);
 
-        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.EcoGallery, defStyle, 0);
+        TypedArray a = context.obtainStyledAttributes(attrs, EcoGallery, defStyle, 0);
 
         int index = a.getInt(R.styleable.EcoGallery_gravity, -1);
         if (index >= 0) {
@@ -924,9 +980,9 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
         // Respect layout params that are already in the view. Otherwise
         // make some up...
-        EcoGallery.LayoutParams lp = (EcoGallery.LayoutParams) child.getLayoutParams();
+        TosGallery.LayoutParams lp = (TosGallery.LayoutParams) child.getLayoutParams();
         if (lp == null) {
-            lp = (EcoGallery.LayoutParams) generateDefaultLayoutParams();
+            lp = (TosGallery.LayoutParams) generateDefaultLayoutParams();
         }
 
         addViewInLayout(child, fromLeft ? -1 : 0, lp);
@@ -1516,6 +1572,7 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
             if (scrollIntoSlots)
                 scrollIntoSlots();
 
+            onEndFling();
         }
 
         public void run() {
@@ -1562,54 +1619,6 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         }
 
     }
-
-    /**
-     * Indicate disable scroll action when the child item is less than mItemCount. in other word,
-     * the children can be fully seeing in the gallery.
-     */
-    private boolean mIsDisableScroll = false;
-    /**
-    * scrolling and animating flag
-    */
-    private boolean mScrolling = false;
-
-
-    /**
-     * The first child offset.
-     */
-    private int mFirstChildOffset = 0;
-
-
-    /**
-     * The scroll velocity ratio.
-     */
-    private float mVelocityRatio = 1.0f;
-
-    /**
-     * Indicate the gallery scroll cycle or not.
-     */
-    private boolean mIsScrollCycle = false;
-
-    /**
-     * The temporary member for mIsScrollCycle
-     */
-    private boolean mIsScrollCycleTemp = true;
-
-    /**
-     * Slot into center. The default behavior of gallery is that the selected child will be slot in
-     * center.
-     */
-    private boolean mIsSlotCenter = false;
-
-    /**
-     * The orientation horizontal
-     */
-    public static final int HORIZONTAL = 0x01;
-
-    /**
-     * The orientation vertical
-     */
-    public static final int VERTICAL = 0x02;
 
     /**
      * Indicate the gallery selected slot in center of not, default is false.
@@ -1811,6 +1820,28 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
     }
 
     /**
+     * Set the gallery fling listener.
+     *
+     * @param listener The OnEndFlingListener instance.
+     *
+     * @author LeeHong
+     */
+    public void setOnEndFlingListener(OnEndFlingListener listener) {
+        mOnEndFlingListener = listener;
+    }
+
+    /**
+     * Called when the gallery ends fling operation.
+     *
+     * @author LeeHong
+     */
+    protected void onEndFling() {
+        if (null != mOnEndFlingListener) {
+            mOnEndFlingListener.onEndFling(this);
+        }
+    }
+
+    /**
      * Gallery extends LayoutParams to provide a place to hold current
      * Transformation information along with previous position/transformation
      * info.
@@ -1900,5 +1931,19 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
         }
 
         return super.drawChild(canvas, child, drawingTime);
+    }
+
+    /**
+     * This interface defines methods for TosGallery.
+     *
+     * @author LeeHong
+     */
+    public interface OnEndFlingListener {
+        /**
+         * Called when the fling operation ends.
+         *
+         * @param v The gallery view.
+         */
+        public void onEndFling(TosGallery v);
     }
 }

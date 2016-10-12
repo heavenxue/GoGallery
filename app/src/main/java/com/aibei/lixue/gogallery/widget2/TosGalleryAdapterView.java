@@ -16,7 +16,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.Adapter;
 import android.widget.ListView;
 
-public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup {
+public abstract class TosGalleryAdapterView<T extends Adapter> extends ViewGroup {
 
     /**
      * The item view type returned by {@link Adapter#getItemViewType(int)} when
@@ -191,15 +191,15 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
      */
     boolean mBlockLayoutRequests = false;
 
-    public EcoGalleryAdapterView(Context context) {
+    public TosGalleryAdapterView(Context context) {
         super(context);
     }
 
-    public EcoGalleryAdapterView(Context context, AttributeSet attrs) {
+    public TosGalleryAdapterView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public EcoGalleryAdapterView(Context context, AttributeSet attrs, int defStyle) {
+    public TosGalleryAdapterView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
     }
 
@@ -222,7 +222,7 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
          * @param position The position of the view in the adapter.
          * @param id       The row id of the item that was clicked.
          */
-        void onItemClick(EcoGalleryAdapterView<?> parent, View view, int position, long id);
+        void onItemClick(TosGalleryAdapterView<?> parent, View view, int position, long id);
     }
 
     /**
@@ -280,7 +280,7 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
          * @param id       The row id of the item that was clicked
          * @return true if the callback consumed the long click, false otherwise
          */
-        boolean onItemLongClick(EcoGalleryAdapterView<?> parent, View view, int position, long id);
+        boolean onItemLongClick(TosGalleryAdapterView<?> parent, View view, int position, long id);
     }
 
     /**
@@ -321,7 +321,7 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
          * @param position The position of the view in the adapter
          * @param id       The row id of the item that is selected
          */
-        void onItemSelected(EcoGalleryAdapterView<?> parent, View view, int position, long id);
+        void onItemSelected(TosGalleryAdapterView<?> parent, View view, int position, long id);
 
         /**
          * Callback method to be invoked when the selection disappears from this
@@ -330,7 +330,7 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
          *
          * @param parent The AdapterView that now contains no selected item.
          */
-        void onNothingSelected(EcoGalleryAdapterView<?> parent);
+        void onNothingSelected(TosGalleryAdapterView<?> parent);
     }
 
     /**
@@ -756,9 +756,9 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
             // Detect the case where a cursor that was previously invalidated
             // has
             // been repopulated with new data.
-            if (EcoGalleryAdapterView.this.getAdapter().hasStableIds() && mInstanceState != null && mOldItemCount == 0
+            if (TosGalleryAdapterView.this.getAdapter().hasStableIds() && mInstanceState != null && mOldItemCount == 0
                     && mItemCount > 0) {
-                EcoGalleryAdapterView.this.onRestoreInstanceState(mInstanceState);
+                TosGalleryAdapterView.this.onRestoreInstanceState(mInstanceState);
                 mInstanceState = null;
             } else {
                 rememberSyncState();
@@ -771,11 +771,11 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
         public void onInvalidated() {
             mDataChanged = true;
 
-            if (EcoGalleryAdapterView.this.getAdapter().hasStableIds()) {
+            if (TosGalleryAdapterView.this.getAdapter().hasStableIds()) {
                 // Remember the current state for the case where our hosting
                 // activity is being
                 // stopped and later restarted
-                mInstanceState = EcoGalleryAdapterView.this.onSaveInstanceState();
+                mInstanceState = TosGalleryAdapterView.this.onSaveInstanceState();
             }
 
             // Data is invalid so we should reset our state
