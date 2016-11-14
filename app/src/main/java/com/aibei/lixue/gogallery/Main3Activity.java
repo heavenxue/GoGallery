@@ -9,8 +9,7 @@ import com.aibei.lixue.gogallery.widget2.TosGallery;
 
 public class Main3Activity extends AppCompatActivity {
     private TosGallery gallery;
-    private int[] imageids = {R.mipmap.girl2,R.mipmap.girl3,R.mipmap.girl4,
-            R.mipmap.girl5};
+    private int[] imageids = {R.mipmap.girl2,R.mipmap.girl3,R.mipmap.girl4,R.mipmap.girl5};
     private ImageAdapter imgAdapter;
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -24,6 +23,5 @@ public class Main3Activity extends AppCompatActivity {
         gallery.setHorizontalScrollBarEnabled(true);
         gallery.setSlotInCenter(true);
         gallery.setScrollCycle(true);
-
     }
 }
