@@ -9,8 +9,7 @@ import android.widget.LinearLayout;
 
 public class Main2Activity extends AppCompatActivity {
     private LinearLayout mLinearLayout;
-    private int[] imageids = {R.mipmap.girl2,R.mipmap.girl3,R.mipmap.girl4,
-            R.mipmap.girl5};
+    private int[] imageids = {R.mipmap.girl2,R.mipmap.girl3,R.mipmap.girl4, R.mipmap.girl5};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,7 +36,5 @@ public class Main2Activity extends AppCompatActivity {
             layout.addView(imageView);
             mLinearLayout.addView(layout);
         }
-
     }
-
 }
